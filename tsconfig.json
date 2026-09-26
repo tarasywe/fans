@@ -9,7 +9,8 @@
       "@/*": ["./src/*", "./*"],
       "@/assets/*": ["./assets/*"],
       "@features/*": ["./src/features/*"],
-      "@ui/*": ["./src/components/ui/*"]
+      "@ui/*": ["./src/components/ui/*"],
+      "@test/*": ["./test/*"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts", "uniwind-types.d.ts"]

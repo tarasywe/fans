@@ -1,11 +1,14 @@
 /** Single source of truth for navigation paths. Never hardcode route strings elsewhere. */
 export const links = {
   root: '/',
-  feed: '/feed',
-  search: '/search',
+  analytics: '/analytics',
+  wallet: '/wallet',
   chats: '/chats',
-  notifications: '/notifications',
-  settings: '/settings',
+  calendar: '/calendar',
+  more: '/more',
+  newChat: '/chats/new',
+  chat: (chatId: string) => ({ pathname: '/chats/[chatId]', params: { chatId } }) as const,
+  user: (userId: string) => ({ pathname: '/users/[userId]', params: { userId } }) as const,
 } as const;
 
-export type AppLink = (typeof links)[keyof typeof links];
+export type TabLink = (typeof links)['analytics' | 'wallet' | 'chats' | 'calendar' | 'more'];

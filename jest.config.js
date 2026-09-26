@@ -2,10 +2,12 @@
 module.exports = {
   preset: 'jest-expo',
   setupFiles: ['./jest.setup.ts'],
+  testMatch: ['**/?(*.)test.[jt]s?(x)'],
   testPathIgnorePatterns: ['/node_modules/', '/ios/', '/android/'],
   moduleNameMapper: {
     '\\.css$': '<rootDir>/test/css-stub.js',
     '^@features/(.*)$': '<rootDir>/src/features/$1',
+    '^@test/(.*)$': '<rootDir>/test/$1',
     '^@ui/(.*)$': '<rootDir>/src/components/ui/$1',
     '^@/assets/(.*)$': '<rootDir>/assets/$1',
     '^@/(.*)$': '<rootDir>/src/$1',

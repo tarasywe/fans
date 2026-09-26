@@ -9,6 +9,12 @@ import { Uniwind, withUniwind } from 'uniwind';
 import { createQueryClient } from '@/lib/query-client';
 import { useNavigationTheme } from '@/theme/use-navigation-theme';
 
+import { installAppMocks } from './mock-api';
+
+installAppMocks();
+// Light-only app: fix the theme before the first render so nothing is styled with the system theme.
+Uniwind.setTheme('light');
+
 const StyledGestureHandlerRootView = withUniwind(GestureHandlerRootView);
 
 function NavigationThemeProvider({ children }: PropsWithChildren) {
@@ -24,7 +30,7 @@ export function AppProviders({ children }: PropsWithChildren) {
       <SafeAreaListener onChange={({ insets }) => Uniwind.updateInsets(insets)}>
         <KeyboardProvider>
           <QueryClientProvider client={queryClient}>
-            <GluestackUIProvider mode="system">
+            <GluestackUIProvider mode="light">
               <NavigationThemeProvider>{children}</NavigationThemeProvider>
             </GluestackUIProvider>
           </QueryClientProvider>

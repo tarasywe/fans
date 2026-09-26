@@ -16,11 +16,11 @@ const routes = {
   index: () => <Redirect href={links.chats} />,
   '+not-found': NotFoundScreen,
   '(tabs)/_layout': { default: TabsLayout, unstable_settings: { initialRouteName: INITIAL_TAB } },
-  '(tabs)/feed': makeScreen('feed-screen'),
-  '(tabs)/search': makeScreen('search-screen'),
+  '(tabs)/analytics': makeScreen('analytics-screen'),
+  '(tabs)/wallet': makeScreen('wallet-screen'),
   '(tabs)/chats': makeScreen('chats-screen'),
-  '(tabs)/notifications': makeScreen('notifications-screen'),
-  '(tabs)/settings': makeScreen('settings-screen'),
+  '(tabs)/calendar': makeScreen('calendar-screen'),
+  '(tabs)/more': makeScreen('more-screen'),
 };
 
 /**
@@ -48,9 +48,9 @@ describe('tab routing', () => {
   });
 
   it('deep-links directly into a non-default tab', async () => {
-    const router = await renderApp(links.settings);
-    expect(screen.getByTestId('settings-screen')).toBeTruthy();
-    expect(router.getPathname()).toBe(links.settings);
+    const router = await renderApp(links.more);
+    expect(screen.getByTestId('more-screen')).toBeTruthy();
+    expect(router.getPathname()).toBe(links.more);
   });
 
   it('shows the not-found screen for unknown paths', async () => {
@@ -69,8 +69,8 @@ describe('tab routing', () => {
 
   it('switches tabs when a tab button is pressed', async () => {
     const router = await renderApp(links.chats);
-    await fireEvent.press(screen.getByTestId('tab-search'));
-    expect(screen.getByTestId('search-screen')).toBeTruthy();
-    expect(router.getPathname()).toBe(links.search);
+    await fireEvent.press(screen.getByTestId('tab-wallet'));
+    expect(screen.getByTestId('wallet-screen')).toBeTruthy();
+    expect(router.getPathname()).toBe(links.wallet);
   });
 });

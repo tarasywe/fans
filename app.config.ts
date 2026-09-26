@@ -9,8 +9,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
-  scheme: 'voicegram',
-  userInterfaceStyle: 'automatic',
+  scheme: 'fans',
+  userInterfaceStyle: 'light',
   ios: {
     icon: './assets/expo.icon',
     bundleIdentifier: BUNDLE_ID,

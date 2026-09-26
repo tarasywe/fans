@@ -14,6 +14,10 @@ describe('TABS', () => {
     expect(TABS.some((tab) => tab.name === INITIAL_TAB)).toBe(true);
   });
 
+  it('features only the chats tab', () => {
+    expect(TABS.filter((tab) => tab.featured).map((tab) => tab.name)).toEqual(['chats']);
+  });
+
   it('has unique names and non-empty titles', () => {
     expect(new Set(TABS.map((tab) => tab.name)).size).toBe(TABS.length);
     for (const tab of TABS) expect(tab.title.trim()).not.toHaveLength(0);

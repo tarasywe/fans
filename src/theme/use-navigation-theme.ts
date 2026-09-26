@@ -1,4 +1,4 @@
-import { useCSSVariable, useUniwind } from 'uniwind';
+import { useCSSVariable } from 'uniwind';
 
 import {
   buildNavigationTheme,
@@ -22,7 +22,6 @@ const COLOR_KEYS = Object.keys(TOKEN_BY_COLOR) as Array<keyof typeof TOKEN_BY_CO
 
 /** Maps the Tailwind tokens from global.css onto the React Navigation theme. */
 export function useNavigationTheme(): NavigationTheme {
-  const { theme } = useUniwind();
   const values = useCSSVariable(COLOR_KEYS.map((key) => TOKEN_BY_COLOR[key]));
 
   const colors: Partial<NavigationColors> = {};
@@ -31,5 +30,5 @@ export function useNavigationTheme(): NavigationTheme {
     if (typeof value === 'string') colors[key] = value;
   });
 
-  return buildNavigationTheme(theme === 'dark', colors);
+  return buildNavigationTheme(colors);
 }
