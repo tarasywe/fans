@@ -126,7 +126,33 @@ export const mockCurrentUser: UserProfile = {
   lastResponseAt: null,
 };
 
-export const mockUsers: readonly UserProfile[] = buildUsers();
+/**
+ * Same id as the backend (fans-backend) error test user. The backend's slow-send test user is
+ * intentionally not mocked: slow networks are tested against the real API only.
+ */
+export const TEST_USER_IDS = { sendError: 'u_test_error' } as const;
+
+function testUser(id: string, displayName: string, username: string, bio: string): UserProfile {
+  return {
+    ...mockCurrentUser,
+    id,
+    displayName,
+    username,
+    isVerified: false,
+    bio,
+    lastOnlineAt: new Date().toISOString(),
+  };
+}
+
+export const mockUsers: readonly UserProfile[] = [
+  testUser(
+    TEST_USER_IDS.sendError,
+    'Test: send fails (500)',
+    'test_send_error',
+    'Every message sent to this chat is rejected with HTTP 500.',
+  ),
+  ...buildUsers(),
+];
 
 export const mockFanLists: readonly FanList[] = [
   { id: 'fl_1', name: 'Top Supporters', memberIds: ['u_1', 'u_2', 'u_3', 'u_4'], fansCount: 4 },

@@ -58,13 +58,14 @@ export function avatarTint(name: string): (typeof TINTS)[number] {
   return TINTS[hash % TINTS.length] ?? TINTS[0];
 }
 
+/** First letters of the first and last words that contain a letter ("Test: send fails (500)" → "TF"). */
 export function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const letters = parts.length > 1 ? [parts[0], parts.at(-1)] : [parts[0]];
-  return letters
-    .map((part) => part?.[0] ?? '')
-    .join('')
-    .toUpperCase();
+  const letters = name
+    .split(/\s+/)
+    .map((word) => word.match(/\p{L}/u)?.[0])
+    .filter((letter): letter is string => letter !== undefined);
+  const picked = letters.length > 1 ? [letters[0], letters.at(-1)] : letters;
+  return picked.join('').toUpperCase();
 }
 
 export function UserAvatar({ name, imageUrl, size = 'md', isOnline, className }: UserAvatarProps) {

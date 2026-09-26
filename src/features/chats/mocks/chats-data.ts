@@ -1,4 +1,4 @@
-import { mockUsers, toUserSummary } from '@features/users';
+import { mockUsers, TEST_USER_IDS, toUserSummary } from '@features/users';
 import { CURRENT_USER_ID } from '@/config/session';
 import { createRandom, sentence } from '@/lib/mock';
 
@@ -12,7 +12,14 @@ export type MockChatRecord = {
   messages: Message[];
   unreadCount: number;
   createdAt: string;
+  /** How POST message behaves — mirrors the backend's network test chats. */
+  sendBehavior: SendBehavior;
 };
+
+export type SendBehavior = 'normal' | 'error';
+
+/** Same id as the backend (fans-backend) error test chat. Slow send is backend-only. */
+export const TEST_CHAT_IDS = { sendError: 'c_test_error' } as const;
 
 const ONE_ON_ONE_CHATS = 18;
 const GIFT_AMOUNTS_CENTS = [500, 1000, 2500, 5000, 10_000];
@@ -52,25 +59,48 @@ function buildMessages(
 
 export function buildMockChats(now = Date.now()): MockChatRecord[] {
   const random = createRandom(7);
-  const records: Omit<MockChatRecord, 'messages' | 'createdAt'>[] = [
+  const records: Omit<MockChatRecord, 'messages' | 'createdAt' | 'sendBehavior'>[] = [
     ...Array.from({ length: ONE_ON_ONE_CHATS }, (_, index) => ({
       id: `c_${index + 1}`,
-      participantIds: [mockUsers[index]?.id ?? 'u_1'],
+      participantIds: [`u_${index + 1}`],
       unreadCount: random.chance(0.3) ? random.int(1, 9) : 0,
     })),
     { id: 'c_group_1', participantIds: ['u_20', 'u_21', 'u_22', 'u_23'], unreadCount: 0 },
     { id: 'c_group_2', participantIds: ['u_24', 'u_25'], unreadCount: 2 },
   ];
 
-  return records.map((record, index) => {
+  const seeded = records.map((record, index): MockChatRecord => {
     // Stagger chats so the most recent activity ranges from seconds to days ago.
     const messages = buildMessages(random, record, now - (index * index * 97 + 30) * 1000);
     return {
       ...record,
       messages,
       createdAt: messages[0]?.createdAt ?? new Date(now).toISOString(),
+      sendBehavior: 'normal',
     };
   });
+
+  const testChat = (
+    id: string,
+    userId: string,
+    sendBehavior: SendBehavior,
+    endAt: number,
+  ): MockChatRecord => {
+    const messages = buildMessages(random, { id, participantIds: [userId] }, endAt);
+    return {
+      id,
+      participantIds: [userId],
+      unreadCount: 0,
+      messages,
+      createdAt: messages[0]?.createdAt ?? new Date(now).toISOString(),
+      sendBehavior,
+    };
+  };
+
+  return [
+    testChat(TEST_CHAT_IDS.sendError, TEST_USER_IDS.sendError, 'error', now - 10_000),
+    ...seeded,
+  ];
 }
 
 export function toChat(record: MockChatRecord): Chat {

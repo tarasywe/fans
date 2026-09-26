@@ -1,16 +1,17 @@
 import { failureStatus, installTestMocks } from '@test/test-utils';
 
 import { fetchFanLists, fetchUser, fetchUsers } from '../api/queries';
-import { mockFanLists, mockUsers, USER_COUNT } from '../mocks/users-data';
+import { mockFanLists, mockUsers, TEST_USER_IDS, USER_COUNT } from '../mocks/users-data';
 import { UserProfileSchema } from '../types/user';
 
 beforeAll(installTestMocks);
 
 describe('users mock data', () => {
-  it('generates valid, unique users', () => {
-    expect(mockUsers).toHaveLength(USER_COUNT);
+  it('generates valid, unique users plus the error test user', () => {
+    expect(mockUsers).toHaveLength(USER_COUNT + 1);
     for (const user of mockUsers) expect(UserProfileSchema.safeParse(user).success).toBe(true);
-    expect(new Set(mockUsers.map((user) => user.username)).size).toBe(USER_COUNT);
+    expect(new Set(mockUsers.map((user) => user.username)).size).toBe(USER_COUNT + 1);
+    expect(mockUsers[0]?.id).toBe(TEST_USER_IDS.sendError);
   });
 
   it('only references existing users in fan lists', () => {
@@ -24,7 +25,7 @@ describe('users mock data', () => {
 
 describe('users API (mocked)', () => {
   it('lists every user without a search', async () => {
-    expect(await fetchUsers('')).toHaveLength(USER_COUNT);
+    expect(await fetchUsers('')).toHaveLength(USER_COUNT + 1);
   });
 
   it('searches by username, @username and display name, case-insensitively', async () => {

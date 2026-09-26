@@ -14,7 +14,7 @@ export function UserProfileScreen() {
 
   return (
     <View className="flex-1 bg-background" testID="user-profile-screen">
-      <View className="flex-row items-center justify-between border-b border-border px-5 pb-3 pt-5">
+      <View className="flex-row items-center justify-between border-b border-border px-5 pb-3 pt-5 android:pt-safe-offset-5">
         <Heading size="md" className="text-foreground">
           Fan Details
         </Heading>
@@ -32,7 +32,7 @@ export function UserProfileScreen() {
         <ErrorState message="Couldn't load this profile." onRetry={() => refetch()} />
       ) : null}
       {user ? (
-        <ScrollView contentContainerClassName="px-5 pb-12 pt-5">
+        <ScrollView contentContainerClassName="px-5 pb-safe-offset-8 pt-5">
           <ProfileDetails user={user} />
         </ScrollView>
       ) : null}

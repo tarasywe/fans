@@ -1,16 +1,15 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { CURRENT_USER_ID } from '@/config/session';
 import { http } from '@/lib/http/http-client';
-
+import { useOutboxStore } from '../store';
 import { ChatSchema, type CreateChatInput, CreateChatInputSchema } from '../types/chat';
 import {
+  type Message,
   MessageSchema,
   type SendMessageInput,
   SendMessageInputSchema,
-  type TextMessage,
 } from '../types/message';
-import { appendMessage, replaceMessage } from '../utils/messages-cache';
+import { appendMessage } from '../utils/messages-cache';
 import { chatsEndpoints } from './endpoints';
 import { chatsKeys, type MessagesData } from './queries';
 
@@ -37,41 +36,28 @@ export function useCreateChatMutation() {
   });
 }
 
-type SendContext = { tempId: string; previous: MessagesData | undefined };
+type SendVariables = SendMessageInput & { localId: string };
 
-/** Sends a text message with an optimistic bubble that is swapped for the server copy. */
+/**
+ * Sends outbox messages. A message is marked sent only when the request succeeds: the server
+ * copy (status `sent`) is added to the messages cache and the outbox entry is removed. On any
+ * failure (HTTP error, timeout, offline) the entry stays in the outbox as `failed`.
+ * Callbacks live on the mutation (not on `mutate`) so they also run for concurrent sends and
+ * after the chat screen is closed.
+ */
 export function useSendMessageMutation(chatId: string) {
   const queryClient = useQueryClient();
-  const key = chatsKeys.messages(chatId);
+  const { markFailed, remove } = useOutboxStore.getState();
 
-  return useMutation<Awaited<ReturnType<typeof sendMessage>>, Error, SendMessageInput, SendContext>(
-    {
-      mutationFn: (input) => sendMessage(chatId, input),
-      onMutate: async (input) => {
-        await queryClient.cancelQueries({ queryKey: key });
-        const previous = queryClient.getQueryData<MessagesData>(key);
-        const tempId = `temp_${Date.now()}`;
-        const optimistic: TextMessage = {
-          id: tempId,
-          chatId,
-          senderId: CURRENT_USER_ID,
-          createdAt: new Date().toISOString(),
-          status: 'sending',
-          type: 'text',
-          text: input.text.trim(),
-        };
-        queryClient.setQueryData<MessagesData>(key, (data) => appendMessage(data, optimistic));
-        return { tempId, previous };
-      },
-      onError: (_error, _input, context) => {
-        if (context) queryClient.setQueryData(key, context.previous);
-      },
-      onSuccess: (message, _input, context) => {
-        queryClient.setQueryData<MessagesData>(key, (data) =>
-          replaceMessage(data, context.tempId, message),
-        );
-      },
-      onSettled: () => queryClient.invalidateQueries({ queryKey: chatsKeys.list() }),
+  return useMutation<Message, Error, SendVariables>({
+    mutationFn: ({ text }) => sendMessage(chatId, { text }),
+    onSuccess: (message, { localId }) => {
+      queryClient.setQueryData<MessagesData>(chatsKeys.messages(chatId), (data) =>
+        appendMessage(data, message),
+      );
+      remove(localId);
     },
-  );
+    onError: (_error, { localId }) => markFailed(localId),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: chatsKeys.list() }),
+  });
 }

@@ -3,27 +3,13 @@ import type { Message } from '../types/message';
 
 const EMPTY: MessagesData = { pages: [{ items: [], nextCursor: null }], pageParams: [null] };
 
-/** Adds a message to the newest page (page 0). */
+/** Adds a message to the newest page (page 0), ignoring duplicates. */
 export function appendMessage(data: MessagesData | undefined, message: Message): MessagesData {
   const source = data ?? EMPTY;
+  if (source.pages.some((page) => page.items.some((item) => item.id === message.id))) return source;
   const [newest, ...older] = source.pages;
   const first = newest ?? { items: [], nextCursor: null };
   return { ...source, pages: [{ ...first, items: [...first.items, message] }, ...older] };
-}
-
-export function replaceMessage(
-  data: MessagesData | undefined,
-  id: string,
-  message: Message,
-): MessagesData | undefined {
-  if (!data) return data;
-  return {
-    ...data,
-    pages: data.pages.map((page) => ({
-      ...page,
-      items: page.items.map((item) => (item.id === id ? message : item)),
-    })),
-  };
 }
 
 /** Flattens newest-first pages into one chronological (oldest → newest) list. */

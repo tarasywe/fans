@@ -5,6 +5,7 @@ export {
   mockCurrentUser,
   mockFanLists,
   mockUsers,
+  TEST_USER_IDS,
   toUserSummary,
 } from './mocks/users-data';
 export { UserProfileScreen } from './screens/user-profile-screen';

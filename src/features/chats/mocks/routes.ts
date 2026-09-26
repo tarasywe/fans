@@ -71,6 +71,7 @@ export const chatsMockRoutes: MockRoute[] = [
         messages: [],
         unreadCount: 0,
         createdAt: new Date().toISOString(),
+        sendBehavior: 'normal' as const,
       };
       chatsDb.insert(record);
       return toChat(record);
@@ -102,6 +103,10 @@ export const chatsMockRoutes: MockRoute[] = [
     path: chatsRoutePatterns.messages,
     handler: (request): TextMessage => {
       const chat = requireChat(request);
+      if (chat.sendBehavior === 'error') {
+        throw new MockHttpError(500, 'Simulated server error: this chat always fails');
+      }
+
       const parsed = SendMessageInputSchema.safeParse(request.body);
       if (!parsed.success)
         throw new MockHttpError(400, parsed.error.issues[0]?.message ?? 'Invalid body');

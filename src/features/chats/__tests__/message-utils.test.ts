@@ -1,6 +1,6 @@
 import { appendWithLimit, formatAmount, messagePreview } from '../utils/message-format';
 import { buildMessageRows } from '../utils/message-rows';
-import { appendMessage, flattenMessages, replaceMessage } from '../utils/messages-cache';
+import { appendMessage, flattenMessages } from '../utils/messages-cache';
 import { isGroupSelected, submitLabel, toggleGroup, toggleId } from '../utils/selection';
 import { textMessage } from './fixtures';
 
@@ -80,18 +80,17 @@ describe('messages cache', () => {
     expect(flattenMessages(undefined)).toEqual([]);
   });
 
-  it('appends to the newest page and replaces by id', () => {
-    const appended = appendMessage(data, textMessage('temp'));
-    expect(flattenMessages(appended).at(-1)?.id).toBe('temp');
-    const replaced = replaceMessage(appended, 'temp', textMessage('5'));
-    expect(flattenMessages(replaced).map((message) => message.id)).toEqual([
+  it('appends to the newest page and ignores duplicates', () => {
+    const appended = appendMessage(data, textMessage('5'));
+    expect(flattenMessages(appended).map((message) => message.id)).toEqual([
       '1',
       '2',
       '3',
       '4',
       '5',
     ]);
-    expect(replaceMessage(undefined, 'x', textMessage('y'))).toBeUndefined();
+    expect(appendMessage(appended, textMessage('5'))).toBe(appended);
+    expect(appendMessage(appended, textMessage('2'))).toBe(appended);
   });
 
   it('creates the first page when the cache is empty', () => {

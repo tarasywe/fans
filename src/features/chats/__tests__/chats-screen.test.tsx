@@ -20,12 +20,12 @@ const chatIds = () =>
     .map((node) => String(node.props.testID).replace('chat-item-', ''));
 
 describe('ChatsScreen', () => {
-  it('shows a loader, then the mocked conversations newest first', async () => {
+  it('shows a loader, then the mocked conversations newest first (error test chat on top)', async () => {
     await renderWithQuery(<ChatsScreen />);
     expect(screen.getByTestId('loading-state')).toBeTruthy();
     await screen.findByTestId('chats-list');
     expect(chatIds()).toHaveLength(chatsDb.all().length);
-    expect(chatIds()[0]).toBe('c_1');
+    expect(chatIds().slice(0, 2)).toEqual(['c_test_error', 'c_1']);
   });
 
   it('filters by username and shows an empty state when nothing matches', async () => {

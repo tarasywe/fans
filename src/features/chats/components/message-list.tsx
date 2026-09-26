@@ -16,6 +16,8 @@ type MessageListProps = {
   isLoadingOlder: boolean;
   onLoadOlder: () => void;
   onAvatarPress: (userId: string) => void;
+  onRetry: (messageId: string) => void;
+  onDiscard: (messageId: string) => void;
   listRef?: Ref<LegendListRef>;
 };
 
@@ -30,6 +32,8 @@ export function MessageList({
   isLoadingOlder,
   onLoadOlder,
   onAvatarPress,
+  onRetry,
+  onDiscard,
   listRef,
 }: MessageListProps) {
   const contentStyle = useResolveClassNames('pb-2');
@@ -47,6 +51,8 @@ export function MessageList({
         showAvatar={row.isLastInGroup}
         showSenderName={isGroup && row.isFirstInGroup}
         onAvatarPress={onAvatarPress}
+        onRetry={onRetry}
+        onDiscard={onDiscard}
       />
     );
 

@@ -7,9 +7,12 @@ import type { ReactElement } from 'react';
 import { http } from '@/lib/http/http-client';
 import { installMockApi } from '@/lib/mock';
 
-/** Wires the shared Axios client to the feature mocks with zero delay. */
-export function installTestMocks(): void {
-  installMockApi(http, [...usersMockRoutes, ...chatsMockRoutes], { minMs: 0, maxMs: 0 });
+/** Wires the shared Axios client to the feature mocks (zero delay unless `latencyMs` is given). */
+export function installTestMocks(latencyMs = 0): void {
+  installMockApi(http, [...usersMockRoutes, ...chatsMockRoutes], {
+    minMs: latencyMs,
+    maxMs: latencyMs,
+  });
 }
 
 export function createTestQueryClient(): QueryClient {

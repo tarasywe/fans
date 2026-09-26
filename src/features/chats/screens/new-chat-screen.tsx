@@ -87,7 +87,7 @@ export function NewChatScreen() {
 
   return (
     <View className="flex-1 bg-background" testID="new-chat-screen">
-      <View className="flex-row items-center justify-between border-b border-border px-5 pb-3 pt-5">
+      <View className="flex-row items-center justify-between border-b border-border px-5 pb-3 pt-5 android:pt-safe-offset-5">
         <Heading size="md" className="text-foreground">
           New message
         </Heading>
