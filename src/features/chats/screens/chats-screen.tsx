@@ -18,7 +18,7 @@ import { filterChats, sortChats, toggleSortOrder } from '../utils/chat-list';
 export function ChatsScreen() {
   const [search, setSearch] = useState('');
   const [order, setOrder] = useState<ChatSortOrder>('newest');
-  const { data, isPending, isError, refetch } = useChatsQuery();
+  const { data, isPending, isError, refetch, fetchStatus } = useChatsQuery();
   // Only a user pull shows the spinner; background refetches stay silent.
   const [isPullRefreshing, setPullRefreshing] = useState(false);
   const contentStyle = useResolveClassNames('pb-4');
@@ -46,7 +46,15 @@ export function ChatsScreen() {
         <SortToggle order={order} onToggle={() => setOrder(toggleSortOrder)} />
       </View>
 
-      {isPending ? <LoadingState label="Loading conversations…" /> : null}
+      {isPending && fetchStatus === 'paused' ? (
+        <EmptyState
+          testID="chats-offline"
+          message="You're offline. Conversations will load when you reconnect."
+        />
+      ) : null}
+      {isPending && fetchStatus !== 'paused' ? (
+        <LoadingState label="Loading conversations…" />
+      ) : null}
       {isError ? (
         <ErrorState message="Couldn't load conversations." onRetry={() => refetch()} />
       ) : null}

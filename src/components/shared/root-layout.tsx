@@ -14,6 +14,7 @@ export function RootLayout() {
             add the top inset themselves with `android:pt-safe-offset-*`. */}
         <Stack.Screen name="chats/new" options={{ presentation: 'modal' }} />
         <Stack.Screen name="users/[userId]" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="dev-tools" options={{ presentation: 'modal' }} />
       </Stack>
     </AppProviders>
   );
