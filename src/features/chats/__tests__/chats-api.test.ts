@@ -13,6 +13,7 @@ import {
 } from '../constants/limits';
 import { buildMockChats } from '../mocks/chats-data';
 import { chatsDb } from '../mocks/chats-store';
+import { createClientId } from '../outbox/client-id';
 import { ChatSchema } from '../types/chat';
 import { MessageSchema } from '../types/message';
 
@@ -116,7 +117,7 @@ describe('read state', () => {
     const first = await fetchMessages(unreadChat.id, null);
     expect(chatsDb.find(unreadChat.id)?.unreadCount).toBe(0);
 
-    unreadChat.unreadCount = 3;
+    chatsDb.setUnread(unreadChat.id, 3);
     await fetchMessages(unreadChat.id, first.nextCursor);
     expect(chatsDb.find(unreadChat.id)?.unreadCount).toBe(3);
   });
@@ -124,14 +125,14 @@ describe('read state', () => {
   it('clears unread when replying', async () => {
     const unreadChat = chatsDb.all().find((chat) => chat.unreadCount > 0);
     if (!unreadChat) throw new Error('fixture needs an unread chat');
-    await sendMessage(unreadChat.id, { text: 'hi' });
+    await sendMessage(unreadChat.id, { clientId: createClientId(), text: 'hi' });
     expect(chatsDb.find(unreadChat.id)?.unreadCount).toBe(0);
   });
 });
 
 describe('POST /chats/:chatId/messages', () => {
   it('trims and appends the message as the newest item', async () => {
-    const message = await sendMessage('c_1', { text: '  hello  ' });
+    const message = await sendMessage('c_1', { clientId: createClientId(), text: '  hello  ' });
     expect(message).toMatchObject({
       type: 'text',
       text: 'hello',
@@ -145,24 +146,101 @@ describe('POST /chats/:chatId/messages', () => {
 
   it('accepts exactly 400 characters', async () => {
     const text = 'a'.repeat(MESSAGE_MAX_LENGTH);
-    expect((await sendMessage('c_1', { text })).type).toBe('text');
+    expect((await sendMessage('c_1', { clientId: createClientId(), text })).type).toBe('text');
   });
 
   it('validates on the client before sending', async () => {
-    await expect(sendMessage('c_1', { text: '   ' })).rejects.toThrow('Message cannot be empty');
-    await expect(sendMessage('c_1', { text: 'a'.repeat(MESSAGE_MAX_LENGTH + 1) })).rejects.toThrow(
-      '400',
+    await expect(sendMessage('c_1', { clientId: createClientId(), text: '   ' })).rejects.toThrow(
+      'Message cannot be empty',
     );
+    await expect(
+      sendMessage('c_1', { clientId: createClientId(), text: 'a'.repeat(MESSAGE_MAX_LENGTH + 1) }),
+    ).rejects.toThrow('400');
   });
 
   it('is rejected by the server when invalid or for unknown chats', async () => {
     const url = chatsEndpoints.messages('c_1');
-    expect(await failureStatus(http.post(url, { text: '' }))).toBe(400);
-    expect(await failureStatus(http.post(url, { text: 'a'.repeat(401) }))).toBe(400);
+    expect(await failureStatus(http.post(url, { clientId: createClientId(), text: '' }))).toBe(400);
+    expect(
+      await failureStatus(http.post(url, { clientId: createClientId(), text: 'a'.repeat(401) })),
+    ).toBe(400);
     expect(await failureStatus(http.post(url, {}))).toBe(400);
-    expect(await failureStatus(http.post(chatsEndpoints.messages('nope'), { text: 'hi' }))).toBe(
-      404,
+    expect(
+      await failureStatus(
+        http.post(chatsEndpoints.messages('nope'), { clientId: createClientId(), text: 'hi' }),
+      ),
+    ).toBe(404);
+  });
+});
+
+describe('idempotent sends (client ID)', () => {
+  it('returns the already-accepted message when the same client ID is sent again', async () => {
+    const clientId = createClientId();
+    const first = await sendMessage('c_1', { clientId, text: 'once' });
+    const retry = await sendMessage('c_1', { clientId, text: 'once' });
+    expect(retry.id).toBe(first.id);
+    expect(retry.clientId).toBe(clientId);
+    const copies = chatsDb.find('c_1')?.messages.filter((m) => m.clientId === clientId);
+    expect(copies).toHaveLength(1);
+  });
+
+  it('treats different client IDs with the same text as different messages', async () => {
+    await sendMessage('c_1', { clientId: createClientId(), text: 'same text' });
+    await sendMessage('c_1', { clientId: createClientId(), text: 'same text' });
+    const copies = chatsDb
+      .find('c_1')
+      ?.messages.filter((m) => m.type === 'text' && m.text === 'same text');
+    expect(copies).toHaveLength(2);
+  });
+
+  it('rejects sends without a valid client ID', async () => {
+    const url = chatsEndpoints.messages('c_1');
+    expect(await failureStatus(http.post(url, { text: 'hi' }))).toBe(400);
+    expect(await failureStatus(http.post(url, { clientId: 'short', text: 'hi' }))).toBe(400);
+    await expect(sendMessage('c_1', { clientId: 'has spaces!!', text: 'hi' })).rejects.toThrow(
+      'Invalid client id',
     );
+  });
+});
+
+describe('mock server persistence (survives app restarts)', () => {
+  it('keeps accepted messages and remembers their client IDs after a reload', async () => {
+    const clientId = createClientId();
+    const accepted = await sendMessage('c_1', { clientId, text: 'persist me' });
+    chatsDb.reload(); // app restart: memory rebuilt from the server's own storage
+
+    expect(chatsDb.find('c_1')?.messages.at(-1)?.id).toBe(accepted.id);
+    const retry = await sendMessage('c_1', { clientId, text: 'persist me' });
+    expect(retry.id).toBe(accepted.id);
+    expect(chatsDb.find('c_1')?.messages.filter((m) => m.clientId === clientId)).toHaveLength(1);
+  });
+
+  it('keeps seeded timestamps stable across reloads so the server order does not change', async () => {
+    const before = chatsDb
+      .find('c_1')
+      ?.messages.slice(-3)
+      .map((m) => m.createdAt);
+    chatsDb.reload();
+    expect(
+      chatsDb
+        .find('c_1')
+        ?.messages.slice(-3)
+        .map((m) => m.createdAt),
+    ).toEqual(before);
+  });
+
+  it('keeps created chats, injected messages and read state', async () => {
+    const chat = await createChat({ participantIds: ['u_5', 'u_6'] });
+    chatsDb.injectIncoming('c_2', 2);
+    chatsDb.reload();
+    expect(chatsDb.find(chat.id)).toBeDefined();
+    expect(
+      chatsDb
+        .find('c_2')
+        ?.messages.slice(-2)
+        .every((m) => m.senderId === 'u_2'),
+    ).toBe(true);
+    expect(chatsDb.find('c_2')?.unreadCount).toBeGreaterThanOrEqual(2);
   });
 });
 

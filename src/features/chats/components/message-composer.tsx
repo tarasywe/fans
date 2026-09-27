@@ -1,5 +1,5 @@
 import { Text } from '@ui/text';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Keyboard, TextInput, View } from 'react-native';
 import { IconButton } from '@/components/shared/icon-button';
 import { PlusCircleIcon, SendIcon } from '@/components/shared/icons';
@@ -13,16 +13,25 @@ type MessageComposerProps = {
   onSend: (text: string) => void;
   isSending?: boolean;
   maxLength?: number;
+  /** Puts text back into the input (e.g. "Edit" on a rejected message). `token` re-triggers it. */
+  prefill?: { text: string; token: number };
 };
 
 export function MessageComposer({
   onSend,
   isSending = false,
   maxLength = MESSAGE_MAX_LENGTH,
+  prefill,
 }: MessageComposerProps) {
   const [text, setText] = useState('');
   const [isPickerOpen, setPickerOpen] = useState(false);
   const inputRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    if (!prefill) return;
+    setText(prefill.text.slice(0, maxLength));
+    inputRef.current?.focus();
+  }, [prefill, maxLength]);
 
   const canSend = text.trim().length > 0 && !isSending;
   const atLimit = text.length >= maxLength;

@@ -7,7 +7,9 @@ const MessageBaseSchema = z.object({
   chatId: z.string().min(1),
   senderId: z.string().min(1),
   createdAt: z.iso.datetime(),
-  status: z.enum(['sending', 'sent', 'read', 'failed']),
+  status: z.enum(['queued', 'sending', 'sent', 'read', 'failed']),
+  /** Idempotency key chosen by the sending client; present on messages sent through the API. */
+  clientId: z.string().min(1).max(64).nullish(),
 });
 
 export const TextMessageSchema = MessageBaseSchema.extend({
@@ -29,7 +31,11 @@ export const MessagesPageSchema = z.object({
   nextCursor: z.string().nullable(),
 });
 
+/** Client-generated idempotency key: stable across retries and app restarts. */
+export const ClientIdSchema = z.string().regex(/^[A-Za-z0-9_-]{8,64}$/, 'Invalid client id');
+
 export const SendMessageInputSchema = z.object({
+  clientId: ClientIdSchema,
   text: z
     .string()
     .trim()

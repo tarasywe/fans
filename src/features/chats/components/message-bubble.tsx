@@ -7,8 +7,15 @@ import { GiftIcon } from '@/components/shared/icons';
 import { UserAvatar } from '@/components/shared/user-avatar';
 import { formatClockTime } from '@/utils/format-time';
 
+import type { OutboxEntry } from '../outbox/outbox-store';
 import type { Message } from '../types/message';
 import { formatAmount, isOwnMessage } from '../utils/message-format';
+
+export type PendingActions = {
+  onRetry: (clientId: string) => void;
+  onDiscard: (clientId: string) => void;
+  onEdit: (clientId: string) => void;
+};
 
 type MessageBubbleProps = {
   message: Message;
@@ -16,36 +23,64 @@ type MessageBubbleProps = {
   showAvatar: boolean;
   showSenderName: boolean;
   onAvatarPress: (userId: string) => void;
-  onRetry?: (messageId: string) => void;
-  onDiscard?: (messageId: string) => void;
+  /** Present while the message is still in the local outbox (queued / sending / failed). */
+  pending?: OutboxEntry;
+  isOnline: boolean;
+  actions?: PendingActions;
 };
 
-const STATUS_LABEL: Record<Message['status'], string> = {
-  sending: 'Sending…',
-  sent: 'Sent',
-  read: 'Read',
-  failed: 'Not sent',
-};
+const CONFIRMED_LABEL = { sent: 'Sent', read: 'Read' } as const;
 
-function FailedActions({ onRetry, onDiscard }: { onRetry: () => void; onDiscard: () => void }) {
+/** Delivery status line for own messages. */
+export function deliveryLabel(
+  message: Message,
+  pending: OutboxEntry | undefined,
+  isOnline: boolean,
+) {
+  if (!pending) return message.status === 'read' ? CONFIRMED_LABEL.read : CONFIRMED_LABEL.sent;
+  if (pending.status === 'sending') return 'Sending…';
+  if (pending.status === 'failed') return 'Not sent';
+  if (!isOnline) return 'Waiting for network';
+  return pending.attempts > 0 ? 'Retrying…' : 'Queued';
+}
+
+function PendingFooter({ entry, actions }: { entry: OutboxEntry; actions: PendingActions }) {
+  const { error } = entry;
+  if (entry.status !== 'failed' || !error) return null;
   return (
-    <View className="flex-row items-center justify-end gap-4 pt-1" testID="failed-actions">
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Retry sending"
-        onPress={onRetry}
-        hitSlop={8}
-      >
-        <Text className="text-sm font-semibold text-primary">Retry</Text>
-      </Pressable>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Delete message"
-        onPress={onDiscard}
-        hitSlop={8}
-      >
-        <Text className="text-sm font-semibold text-destructive">Delete</Text>
-      </Pressable>
+    <View className="gap-1 pt-1" testID="failed-actions">
+      <Text className="text-xs text-destructive" testID={`send-error-${entry.clientId}`}>
+        {error.message}
+      </Text>
+      <View className="flex-row items-center justify-end gap-4">
+        {error.recoverable ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Retry sending"
+            onPress={() => actions.onRetry(entry.clientId)}
+            hitSlop={8}
+          >
+            <Text className="text-sm font-semibold text-primary">Retry</Text>
+          </Pressable>
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Edit message"
+            onPress={() => actions.onEdit(entry.clientId)}
+            hitSlop={8}
+          >
+            <Text className="text-sm font-semibold text-primary">Edit</Text>
+          </Pressable>
+        )}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Delete message"
+          onPress={() => actions.onDiscard(entry.clientId)}
+          hitSlop={8}
+        >
+          <Text className="text-sm font-semibold text-destructive">Delete</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -70,12 +105,14 @@ export function MessageBubble({
   showAvatar,
   showSenderName,
   onAvatarPress,
-  onRetry,
-  onDiscard,
+  pending,
+  isOnline,
+  actions,
 }: MessageBubbleProps) {
   const own = isOwnMessage(message);
   const time = formatClockTime(new Date(message.createdAt));
-  const failed = own && message.status === 'failed';
+  const failed = pending?.status === 'failed';
+  const waiting = pending !== undefined && !failed;
 
   return (
     <View
@@ -100,7 +137,7 @@ export function MessageBubble({
       <View
         className={`flex-shrink gap-1 rounded-2xl px-3.5 py-2.5 ${
           own ? 'rounded-br-md bg-secondary' : 'rounded-bl-md bg-bubble'
-        } ${message.status === 'sending' ? 'opacity-60' : ''} ${failed ? 'border border-destructive' : ''}`}
+        } ${waiting ? 'opacity-60' : ''} ${failed ? 'border border-destructive' : ''}`}
       >
         {showSenderName && sender && !own ? (
           <Text className="text-xs font-semibold text-primary">{sender.displayName}</Text>
@@ -112,17 +149,12 @@ export function MessageBubble({
         )}
         <Text
           className={`text-xs ${failed ? 'text-destructive' : 'text-muted-foreground'} ${own ? 'self-end' : ''}`}
-          testID={own ? `message-status-${message.id}` : undefined}
+          testID={own ? `message-status-${message.clientId ?? message.id}` : undefined}
         >
           {time}
-          {own ? ` · ${STATUS_LABEL[message.status]}` : ''}
+          {own ? ` · ${deliveryLabel(message, pending, isOnline)}` : ''}
         </Text>
-        {failed && onRetry && onDiscard ? (
-          <FailedActions
-            onRetry={() => onRetry(message.id)}
-            onDiscard={() => onDiscard(message.id)}
-          />
-        ) : null}
+        {pending && actions ? <PendingFooter entry={pending} actions={actions} /> : null}
       </View>
     </View>
   );

@@ -7,6 +7,7 @@ import {
 } from 'axios';
 
 import { matchRoute } from './match-route';
+import { useMockFaults } from './mock-faults';
 import { type HttpMethod, MockHttpError, type MockRoute } from './mock-types';
 
 export type MockDelay = { minMs: number; maxMs: number };
@@ -71,6 +72,17 @@ export function createMockAdapter(
       );
     };
 
+    const faults = useMockFaults.getState();
+    const lostNetwork = (): never => {
+      throw new AxiosError('Network Error', AxiosError.ERR_NETWORK, config);
+    };
+
+    // Injected faults (see mock-faults.ts). Offline: the request never reaches the server.
+    if (faults.offline) return lostNetwork();
+    if (method === 'post' && faults.consume('failWith500')) {
+      return fail(500, 'Injected server error (Dev Tools)');
+    }
+
     if (!match) return fail(404, `No mock route for ${method.toUpperCase()} ${url.pathname}`);
 
     try {
@@ -81,8 +93,11 @@ export function createMockAdapter(
         query: { ...Object.fromEntries(url.searchParams), ...toQuery(config.params) },
         body: parseBody(config.data),
       });
+      // Lost response: the server already applied the request, but the client never hears back.
+      if (method === 'post' && useMockFaults.getState().consume('loseResponses')) lostNetwork();
       return response(config, method === 'post' ? 201 : 200, data);
     } catch (error) {
+      if (error instanceof AxiosError) throw error;
       if (error instanceof MockHttpError) return fail(error.status, error.message);
       return fail(500, error instanceof Error ? error.message : 'Mock handler failed');
     }

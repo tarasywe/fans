@@ -1,6 +1,7 @@
 import { formatDayLabel, isSameDay } from '@/utils/format-time';
 
 import type { Message } from '../types/message';
+import { messageKey } from './thread';
 
 export type MessageRow =
   | { kind: 'day'; key: string; label: string }
@@ -28,7 +29,11 @@ export function buildMessageRows(
     const newDay = !previous || !isSameDay(new Date(previous.createdAt), date);
 
     if (newDay)
-      rows.push({ kind: 'day', key: `day_${message.id}`, label: formatDayLabel(date, now) });
+      rows.push({
+        kind: 'day',
+        key: `day_${messageKey(message)}`,
+        label: formatDayLabel(date, now),
+      });
 
     const nextSameGroup =
       next !== undefined &&
@@ -36,7 +41,7 @@ export function buildMessageRows(
       isSameDay(new Date(next.createdAt), date);
     rows.push({
       kind: 'message',
-      key: message.id,
+      key: messageKey(message),
       message,
       isLastInGroup: !nextSameGroup,
       isFirstInGroup: newDay || previous?.senderId !== message.senderId,

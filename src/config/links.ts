@@ -7,6 +7,7 @@ export const links = {
   calendar: '/calendar',
   more: '/more',
   newChat: '/chats/new',
+  devTools: '/dev-tools',
   chat: (chatId: string) => ({ pathname: '/chats/[chatId]', params: { chatId } }) as const,
   user: (userId: string) => ({ pathname: '/users/[userId]', params: { userId } }) as const,
 } as const;

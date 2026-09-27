@@ -86,7 +86,7 @@ export const chatsMockRoutes: MockRoute[] = [
       const limit = parseLimit(request.query.limit);
       const before = request.query.before;
       // Opening a chat (first page) marks it as read.
-      if (!before) chat.unreadCount = 0;
+      if (!before && chat.unreadCount > 0) chatsDb.setUnread(chat.id, 0);
 
       let end = messages.length;
       if (before) {
@@ -111,17 +111,22 @@ export const chatsMockRoutes: MockRoute[] = [
       if (!parsed.success)
         throw new MockHttpError(400, parsed.error.issues[0]?.message ?? 'Invalid body');
 
+      // Idempotency: a retried send (same client ID) returns the message accepted the first time.
+      const existing = chatsDb.findByClientId(chat.id, parsed.data.clientId);
+      if (existing?.type === 'text') return existing;
+
       const message: TextMessage = {
         id: chatsDb.nextId(`${chat.id}_m`),
         chatId: chat.id,
         senderId: CURRENT_USER_ID,
+        clientId: parsed.data.clientId,
         createdAt: new Date().toISOString(),
         status: 'sent',
         type: 'text',
         text: parsed.data.text,
       };
-      chat.messages.push(message);
-      chat.unreadCount = 0;
+      chatsDb.append(chat.id, message);
+      if (chat.unreadCount > 0) chatsDb.setUnread(chat.id, 0);
       return message;
     },
   },

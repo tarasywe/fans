@@ -14,7 +14,13 @@
     "check:fix": "biome check --write .",
     "typecheck": "tsc --noEmit",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "start:mock": "EXPO_PUBLIC_USE_MOCK_API=1 expo start --clear",
+    "start:mock:clean": "EXPO_PUBLIC_USE_MOCK_API=1 EXPO_PUBLIC_MOCK_SCENARIO=clean expo start --clear",
+    "start:mock:offline": "EXPO_PUBLIC_USE_MOCK_API=1 EXPO_PUBLIC_MOCK_SCENARIO=offline expo start --clear",
+    "start:mock:lost-response": "EXPO_PUBLIC_USE_MOCK_API=1 EXPO_PUBLIC_MOCK_SCENARIO=lost-response expo start --clear",
+    "start:mock:server-error": "EXPO_PUBLIC_USE_MOCK_API=1 EXPO_PUBLIC_MOCK_SCENARIO=server-error expo start --clear",
+    "test:reliability": "jest src/features/chats/__tests__/reliability src/features/chats/__tests__/outbox-store.test.ts src/features/chats/__tests__/send-error.test.ts --verbose"
   },
   "dependencies": {
     "@expo/html-elements": "0.12.5",
@@ -22,7 +28,10 @@
     "@gluestack-ui/utils": "5.0.6",
     "@legendapp/list": "3.4.0",
     "@legendapp/motion": "2.5.3",
+    "@react-native-community/netinfo": "12.0.1",
+    "@tanstack/query-sync-storage-persister": "5.103.2",
     "@tanstack/react-query": "5.103.2",
+    "@tanstack/react-query-persist-client": "5.103.2",
     "axios": "1.20.0",
     "expo": "57.0.4",
     "expo-constants": "57.0.3",

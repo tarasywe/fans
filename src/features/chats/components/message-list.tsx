@@ -3,10 +3,11 @@ import { LegendList, type LegendListRef } from '@legendapp/list/react-native';
 import type { Ref } from 'react';
 import { useResolveClassNames } from 'uniwind';
 
+import type { OutboxEntry } from '../outbox/outbox-store';
 import type { Message } from '../types/message';
 import { buildMessageRows, type MessageRow } from '../utils/message-rows';
 import { DaySeparator } from './day-separator';
-import { MessageBubble } from './message-bubble';
+import { MessageBubble, type PendingActions } from './message-bubble';
 import { OlderMessagesIndicator } from './older-messages-indicator';
 
 type MessageListProps = {
@@ -16,8 +17,10 @@ type MessageListProps = {
   isLoadingOlder: boolean;
   onLoadOlder: () => void;
   onAvatarPress: (userId: string) => void;
-  onRetry: (messageId: string) => void;
-  onDiscard: (messageId: string) => void;
+  /** Local outbox entries of this chat, to show delivery state on pending bubbles. */
+  pending: readonly OutboxEntry[];
+  isOnline: boolean;
+  actions: PendingActions;
   listRef?: Ref<LegendListRef>;
 };
 
@@ -32,14 +35,16 @@ export function MessageList({
   isLoadingOlder,
   onLoadOlder,
   onAvatarPress,
-  onRetry,
-  onDiscard,
+  pending,
+  isOnline,
+  actions,
   listRef,
 }: MessageListProps) {
   const contentStyle = useResolveClassNames('pb-2');
   const rows = buildMessageRows(messages);
   const isGroup = participants.length > 1;
   const findSender = (id: string) => participants.find((user) => user.id === id);
+  const pendingByClientId = new Map(pending.map((entry) => [entry.clientId, entry]));
 
   const renderRow = (row: MessageRow) =>
     row.kind === 'day' ? (
@@ -51,8 +56,9 @@ export function MessageList({
         showAvatar={row.isLastInGroup}
         showSenderName={isGroup && row.isFirstInGroup}
         onAvatarPress={onAvatarPress}
-        onRetry={onRetry}
-        onDiscard={onDiscard}
+        pending={row.message.clientId ? pendingByClientId.get(row.message.clientId) : undefined}
+        isOnline={isOnline}
+        actions={actions}
       />
     );
 
@@ -62,6 +68,7 @@ export function MessageList({
       data={rows}
       keyExtractor={(row) => row.key}
       getItemType={(row) => row.kind}
+      extraData={pending}
       renderItem={({ item }) => renderRow(item)}
       estimatedItemSize={72}
       recycleItems

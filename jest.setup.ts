@@ -15,3 +15,12 @@ jest.spyOn(console, 'warn').mockImplementation((message?: unknown, ...rest: unkn
   if (typeof message === 'string' && message.includes('is not a valid color or brush')) return;
   originalWarn(message, ...rest);
 });
+
+// react-native-mmkv uses an in-memory mock under Jest, but still imports Nitro's native module.
+jest.mock('react-native-nitro-modules', () => ({
+  NitroModules: { createHybridObject: jest.fn(), box: jest.fn() },
+}));
+
+jest.mock('@react-native-community/netinfo', () =>
+  require('@react-native-community/netinfo/jest/netinfo-mock.js'),
+);
