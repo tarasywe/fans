@@ -13,6 +13,11 @@ UI & interaction: react-native-gesture-handler · react-native-reanimated ·
 · react-native-svg · react-dom and
 react-native-web (required on native by gluestack v5's react-aria dependency)
 · @legendapp/list (chat / long lists) · expo-image · expo-secure-store
+· @react-native-community/netinfo (connectivity) · @tanstack/react-query-persist-client +
+@tanstack/query-sync-storage-persister (query cache persisted to MMKV)
+
+Billing: react-native-purchases + react-native-purchases-ui 10.10.2 (RevenueCat, exact pins;
+mocked in jest.setup.ts)
 
 gluestack v5 runtime deps (installed by `gluestack-ui init`): @gluestack-ui/core ·
 @gluestack-ui/utils · @expo/html-elements · @legendapp/motion · react-aria ·
@@ -122,12 +127,36 @@ After every change: `npm run check` (biome + tsc) → `npm test` → if UI chang
 - **Backend:** NestJS in `../wikibackend` (branch `fans-backend`, Railway). `EXPO_PUBLIC_API_URL`
   (origin without `/v1`, read in `src/config/env.ts`) switches the app from the in-app mocks to the
   real API; `src/config/api.ts` derives `API_BASE_URL` / `USE_MOCK_API`. Keep the mock routes and
-  the backend contract identical (same ids, shapes and test chats `c_test_error` / `c_test_slow`).
-- **Sending messages = outbox pattern.** Pending/failed sends are client state in
-  `features/chats/store.ts` (Zustand); only a successful POST moves the server copy into the
-  React Query cache. Mutation callbacks live on `useMutation` (not `mutate`) so concurrent sends
-  and sends that finish after the screen closes are still handled.
+  the backend contract identical (same ids and shapes). Test chats: `c_test_error` exists in both;
+  `c_test_slow` (slow send) is backend-only on purpose — don't add it back to the mocks.
+- **Sending messages = durable outbox + client ID** (see docs/message-delivery-reliability.md).
+  `features/chats/outbox/`: `outbox-store.ts` writes to MMKV *before* updating memory; every send
+  has a `clientId` reused for all retries (the server dedupes on it); `outbox-sync.ts` is the one
+  app-wide sender (`<OutboxSync/>` in AppProviders), sequential, local order, "no response" =
+  re-queue, HTTP error = failed (+ recoverable?). Never send a message without a clientId and never
+  regenerate one on retry.
+- **MMKV instances:** `fans-outbox` (client queue), `fans-mock-server` (mock backend DB, separate on
+  purpose), `fans-query-cache` (React Query), `fans-dev-tools` (mock faults). Jest uses MMKV's
+  in-memory mock (Nitro is stubbed in jest.setup.ts).
+- **Never `queryClient.clear()` while screens are mounted** — observed queries are dropped from the
+  cache and stop persisting. Use `resetQueries()`.
+- **React Query onlineManager** is wired to connectivity at module load
+  (`lib/network/connectivity.ts`) so first-render queries pause offline instead of failing.
+- **Repro tooling:** Network lab screen (More → Network lab, dev only), `npm run start:mock:*`
+  presets (`EXPO_PUBLIC_USE_MOCK_API=1`, `EXPO_PUBLIC_MOCK_SCENARIO`), `npm run test:reliability`.
+  Restart tests: `test/app-restart.ts` + `renderPersistedApp`; unmount with the render's own
+  `unmount`, not `screen.unmount()` (breaks the next test's render).
 - **Safe areas (Android is edge-to-edge).** Every screen owns its insets with UniWind classes
   (`pt-safe`, `pb-safe-offset-*`). `presentation: 'modal'` is a page sheet on iOS (already below the
-  status bar) but a full-screen page on Android, so modal headers use `pt-5 android:pt-safe-offset-5`.
+  status bar) but a full-screen page on Android, so modal headers use `MODAL_TOP_CLASS` from
+  `components/shared/modal-insets.ts` (chosen with `Platform.OS`). Don't use UniWind's `android:` /
+  `ios:` variants for insets — `android:pt-safe-offset-5` was applied on iOS too.
   Check new screens on Android for status-bar / navigation-bar overlap.
+- **RevenueCat Test Store logs** errors for simulated failures, which open LogBox; expected ones
+  are listed in `LogBox.ignoreLogs` in `revenuecat-store.ts`. `presentCustomerCenter` does not
+  present over an RN modal (hangs) — the Test Store simulates cancellation instead, real keys use
+  `showManageSubscriptions()`.
+- **Mock presets apply once per script run**, not per launch: `start:mock:*` sets
+  `EXPO_PUBLIC_MOCK_RUN_ID=$(date +%s)` and `dev-tools/launch-scenario.ts` remembers the applied run
+  in MMKV. Otherwise the inlined `clean` preset wiped the outbox on every force-quit (breaks the
+  restart scenarios). New presets need the run id in their script too.
