@@ -39,6 +39,18 @@ function toQuery(params: unknown): Record<string, string> {
   return query;
 }
 
+function toHeaders(headers: unknown): Record<string, string> {
+  const result: Record<string, string> = {};
+  const source =
+    headers && typeof headers === 'object' && 'toJSON' in headers
+      ? (headers as { toJSON: () => Record<string, unknown> }).toJSON()
+      : (headers as Record<string, unknown> | undefined);
+  for (const [key, value] of Object.entries(source ?? {})) {
+    if (value !== undefined && value !== null) result[key.toLowerCase()] = String(value);
+  }
+  return result;
+}
+
 function response(
   config: InternalAxiosRequestConfig,
   status: number,
@@ -92,6 +104,7 @@ export function createMockAdapter(
         params: match.params,
         query: { ...Object.fromEntries(url.searchParams), ...toQuery(config.params) },
         body: parseBody(config.data),
+        headers: toHeaders(config.headers),
       });
       // Lost response: the server already applied the request, but the client never hears back.
       if (method === 'post' && useMockFaults.getState().consume('loseResponses')) lostNetwork();

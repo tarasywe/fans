@@ -24,3 +24,29 @@ jest.mock('react-native-nitro-modules', () => ({
 jest.mock('@react-native-community/netinfo', () =>
   require('@react-native-community/netinfo/jest/netinfo-mock.js'),
 );
+
+// Native RevenueCat SDK: never selected under Jest (the simulated store is), but its modules are
+// imported, so give them inert stand-ins.
+jest.mock('react-native-purchases', () => ({
+  __esModule: true,
+  default: { configure: jest.fn(), setLogLevel: jest.fn(), getAppUserID: jest.fn() },
+  LOG_LEVEL: { INFO: 'INFO', WARN: 'WARN' },
+  PURCHASES_ERROR_CODE: { PURCHASE_CANCELLED_ERROR: '1' },
+}));
+jest.mock('react-native-purchases-ui', () => ({
+  __esModule: true,
+  default: { Paywall: () => null, presentCustomerCenter: jest.fn() },
+}));
+
+// Native RevenueCat SDK: never selected under Jest (the simulated store is), but its modules are
+// imported, so give them inert stand-ins.
+jest.mock('react-native-purchases', () => ({
+  __esModule: true,
+  default: { configure: jest.fn(), setLogLevel: jest.fn(), getAppUserID: jest.fn() },
+  LOG_LEVEL: { INFO: 'INFO', WARN: 'WARN' },
+  PURCHASES_ERROR_CODE: { PURCHASE_CANCELLED_ERROR: '1' },
+}));
+jest.mock('react-native-purchases-ui', () => ({
+  __esModule: true,
+  default: { Paywall: () => null, presentCustomerCenter: jest.fn() },
+}));

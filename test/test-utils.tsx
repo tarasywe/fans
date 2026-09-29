@@ -1,3 +1,4 @@
+import { BillingSync, billingMockRoutes } from '@features/billing';
 import { chatsMockRoutes, OutboxSync } from '@features/chats';
 import { usersMockRoutes } from '@features/users';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -10,15 +11,19 @@ import { installMockApi, NO_FAULTS, useMockFaults } from '@/lib/mock';
 import { useConnectivity } from '@/lib/network/connectivity';
 import { createQueryPersister, shouldPersistQuery } from '@/lib/query-persister';
 
+import { billingTiming } from '../src/features/billing/constants';
+import { billingSyncTiming } from '../src/features/billing/sync/billing-sync';
 import { syncTiming } from '../src/features/chats/outbox/outbox-sync';
 
 /** Wires the shared Axios client to the feature mocks (zero delay unless `latencyMs` is given). */
 export function installTestMocks(latencyMs = 0): void {
-  installMockApi(http, [...usersMockRoutes, ...chatsMockRoutes], {
+  installMockApi(http, [...usersMockRoutes, ...chatsMockRoutes, ...billingMockRoutes], {
     minMs: latencyMs,
     maxMs: latencyMs,
   });
   syncTiming.backoffScale = 0; // retries after a lost response happen on the next tick
+  billingSyncTiming.backoffScale = 0;
+  billingTiming.accessPollMs = 40;
 }
 
 export function resetNetwork(): void {
@@ -46,6 +51,7 @@ export async function renderWithQuery(ui: ReactElement, client = createTestQuery
   const result = await render(
     <QueryClientProvider client={client}>
       <OutboxSync />
+      <BillingSync />
       {ui}
     </QueryClientProvider>,
   );
@@ -63,6 +69,7 @@ function PersistedProviders({ client, children }: { client: QueryClient; childre
       }}
     >
       <OutboxSync />
+      <BillingSync />
       {children}
     </PersistQueryClientProvider>
   );

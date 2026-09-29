@@ -1,5 +1,6 @@
+import { billingMockRoutes } from '@features/billing';
 import { chatsMockRoutes } from '@features/chats';
-import { applyMockScenario } from '@features/dev-tools';
+import { applyLaunchScenario } from '@features/dev-tools';
 import { usersMockRoutes } from '@features/users';
 import { USE_MOCK_API } from '@/config/api';
 import { env } from '@/config/env';
@@ -12,6 +13,9 @@ import { installMockApi } from '@/lib/mock';
  */
 export function installAppMocks(): void {
   if (!USE_MOCK_API) return;
-  installMockApi(http, [...usersMockRoutes, ...chatsMockRoutes]);
-  if (env.EXPO_PUBLIC_MOCK_SCENARIO) applyMockScenario(env.EXPO_PUBLIC_MOCK_SCENARIO);
+  installMockApi(http, [...usersMockRoutes, ...chatsMockRoutes, ...billingMockRoutes]);
+  // Once per `start:mock:*` run, not per launch: restarts and Fast Refresh keep the state.
+  if (env.EXPO_PUBLIC_MOCK_SCENARIO) {
+    applyLaunchScenario(env.EXPO_PUBLIC_MOCK_SCENARIO, env.EXPO_PUBLIC_MOCK_RUN_ID);
+  }
 }
