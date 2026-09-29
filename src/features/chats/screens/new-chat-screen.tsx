@@ -10,13 +10,13 @@ import { View } from 'react-native';
 import { useResolveClassNames } from 'uniwind';
 import { IconButton } from '@/components/shared/icon-button';
 import { FanSuiteLogoIcon } from '@/components/shared/icons';
+import { MODAL_TOP_CLASS } from '@/components/shared/modal-insets';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/query-state';
 import { SearchField } from '@/components/shared/search-field';
 import { UserAvatar } from '@/components/shared/user-avatar';
 import { VerifiedBadge } from '@/components/shared/verified-badge';
 import { links } from '@/config/links';
 import { useDebouncedValue } from '@/utils/use-debounced-value';
-
 import { useCreateChatMutation } from '../api/mutations';
 import { SelectableRow } from '../components/selectable-row';
 import { isGroupSelected, submitLabel, toggleGroup, toggleId } from '../utils/selection';
@@ -87,7 +87,9 @@ export function NewChatScreen() {
 
   return (
     <View className="flex-1 bg-background" testID="new-chat-screen">
-      <View className="flex-row items-center justify-between border-b border-border px-5 pb-3 pt-5 android:pt-safe-offset-5">
+      <View
+        className={`flex-row items-center justify-between border-b border-border px-5 pb-3 ${MODAL_TOP_CLASS}`}
+      >
         <Heading size="md" className="text-foreground">
           New message
         </Heading>

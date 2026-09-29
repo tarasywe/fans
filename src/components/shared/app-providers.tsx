@@ -1,3 +1,4 @@
+import { BillingSync } from '@features/billing';
 import { OutboxSync } from '@features/chats';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { GluestackUIProvider } from '@ui/gluestack-ui-provider';
@@ -43,6 +44,7 @@ export function AppProviders({ children }: PropsWithChildren) {
         <KeyboardProvider>
           <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
             <OutboxSync />
+            <BillingSync />
             <GluestackUIProvider mode="light">
               <NavigationThemeProvider>{children}</NavigationThemeProvider>
             </GluestackUIProvider>

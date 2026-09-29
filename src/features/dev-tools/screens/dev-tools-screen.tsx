@@ -9,9 +9,10 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Switch, View } from 'react-native';
 import { IconButton } from '@/components/shared/icon-button';
+import { MODAL_TOP_CLASS } from '@/components/shared/modal-insets';
 import { USE_MOCK_API } from '@/config/api';
 import { useMockFaults } from '@/lib/mock';
-
+import { BillingLab } from '../components/billing-lab';
 import { LabRow } from '../components/lab-row';
 import { resetEverything } from '../scenarios';
 
@@ -40,7 +41,9 @@ export function DevToolsScreen() {
 
   return (
     <View className="flex-1 bg-background" testID="dev-tools-screen">
-      <View className="flex-row items-center justify-between border-b border-border px-5 pb-3 pt-5 android:pt-safe-offset-5">
+      <View
+        className={`flex-row items-center justify-between border-b border-border px-5 pb-3 ${MODAL_TOP_CLASS}`}
+      >
         <Heading size="md" className="text-foreground">
           Network lab
         </Heading>
@@ -120,6 +123,8 @@ export function DevToolsScreen() {
             ))
           )}
         </View>
+
+        <BillingLab />
 
         <Button variant="destructive" onPress={reset} testID="lab-reset">
           <ButtonText>Reset mock server, outbox and cache</ButtonText>

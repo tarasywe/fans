@@ -6,6 +6,8 @@ export type MockRequest = {
   params: Record<string, string>;
   query: Record<string, string>;
   body: unknown;
+  /** Lower-cased request headers. */
+  headers: Record<string, string>;
 };
 
 export type MockRoute = {
